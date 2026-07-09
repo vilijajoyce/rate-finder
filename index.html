@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rate Finder — negotiated rate lookup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16233A;
+    --paper:#F7F6F2;
+    --paper-raised:#FFFFFF;
+    --rule:#DAD6CC;
+    --teal:#1F8A70;
+    --teal-dim:#E4F1EC;
+    --rust:#B5533C;
+    --rust-dim:#F5E7E2;
+    --muted:#5B6472;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    line-height:1.5;
+    padding:48px 20px 80px;
+  }
+  .wrap{max-width:720px;margin:0 auto;}
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--teal);
+    margin:0 0 10px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:clamp(28px,5vw,38px);
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:15px;
+    max-width:56ch;
+    margin:0 0 36px;
+  }
+  .panel{
+    background:var(--paper-raised);
+    border:1px solid var(--rule);
+    border-radius:10px;
+    padding:24px;
+    margin-bottom:24px;
+  }
+  label{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .field-label-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:6px;
+  }
+  .field-label-row label{margin-bottom:0;}
+  .fieldlink{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size:11.5px;
+    font-weight:500;
+    color:var(--teal);
+    text-decoration:none;
+    text-transform:none;
+    letter-spacing:normal;
+    white-space:nowrap;
+  }
+  .fieldlink:hover{text-decoration:underline;}
+  .row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;}
+  .row .field{flex:1;min-width:160px;}
+  input[type=text]{
+    width:100%;
+    padding:11px 12px;
+    border:1px solid var(--rule);
+    border-radius:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:14px;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  input[type=text]:focus, textarea:focus{
+    outline:2px solid var(--teal);
+    outline-offset:1px;
+    background:#fff;
+  }
+  input[type=text]::placeholder, textarea::placeholder{
+    color:#9AA1AC;
+    opacity:1;
+  }
+  textarea{
+    width:100%;
+    min-height:220px;
+    padding:14px;
+    border:1px solid var(--rule);
+    border-radius:6px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    line-height:1.6;
+    color:var(--ink);
+    background:var(--paper);
+    resize:vertical;
+  }
+  .hint{
+    font-size:12.5px;
+    color:var(--muted);
+    margin-top:8px;
+  }
+  button{
+    font-family:'IBM Plex Sans', sans-serif;
+    font-weight:600;
+    font-size:14.5px;
+    background:var(--ink);
+    color:var(--paper);
+    border:none;
+    border-radius:7px;
+    padding:13px 22px;
+    cursor:pointer;
+    margin-top:6px;
+  }
+  button:hover{background:#233252;}
+  button:focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+
+  .results{margin-top:8px;}
+  .results h2{
+    font-family:'Fraunces', serif;
+    font-size:19px;
+    font-weight:600;
+    margin:0 0 14px;
+  }
+  .empty{
+    color:var(--muted);
+    font-size:14px;
+    padding:20px 4px;
+  }
+  .ledger{
+    border-top:1px solid var(--rule);
+  }
+  .ledger-row{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    padding:14px 2px;
+    border-bottom:1px solid var(--rule);
+  }
+  .ledger-desc{
+    font-size:14px;
+    white-space:nowrap;
+  }
+  .ledger-tags{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-top:4px;
+  }
+  .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    letter-spacing:.02em;
+    background:var(--teal-dim);
+    color:var(--teal);
+    padding:2px 7px;
+    border-radius:20px;
+  }
+  .tag.group{
+    background:#EAEAEA;
+    color:var(--muted);
+  }
+  .leader{
+    flex:1;
+    border-bottom:1px dotted var(--rule);
+    transform:translateY(-4px);
+    min-width:24px;
+  }
+  .amount{
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:17px;
+    white-space:nowrap;
+  }
+  .share{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--teal);
+    white-space:nowrap;
+    margin-left:10px;
+  }
+  .notice{
+    background:var(--rust-dim);
+    color:var(--rust);
+    border-radius:8px;
+    padding:12px 14px;
+    font-size:13px;
+    margin-bottom:16px;
+  }
+  .notice strong{color:var(--rust);}
+  .coins-field{max-width:160px;}
+  footer{
+    margin-top:40px;
+    font-size:12px;
+    color:var(--muted);
+    border-top:1px solid var(--rule);
+    padding-top:16px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p class="eyebrow">Rate Finder · prototype</p>
+  <h1>Find your negotiated Aetna MHBP rate</h1>
+  <p class="sub"></p>
+
+  <div class="notice" style="margin-bottom:24px;">
+    <strong>This is a prototype </strong>, not a production tool or an official source. Rates come from Aetna's federally-mandated public disclosure file for MHBP. It has not been independently verified for accuracy, and the source data cannot always distinguish between overlapping plan variants or contracts. Always confirm any result with your payer before relying on it.
+  </div>
+
+  <div class="panel">
+    <div class="row">
+      <div class="field">
+        <div class="field-label-row">
+          <label for="npi">Provider NPI</label>
+          <a class="fieldlink" href="https://npiregistry.cms.hhs.gov/search" target="_blank" rel="noopener">look up an NPI ↗</a>
+        </div>
+        <input type="text" id="npi" placeholder="e.g. 1013950807">
+      </div>
+      <div class="field">
+        <div class="field-label-row">
+          <label for="cpt">CPT / HCPCS code</label>
+          <a class="fieldlink" href="https://www.aapc.com/codes/cpt-codes-range/" target="_blank" rel="noopener">look up a CPT code ↗</a>
+        </div>
+        <input type="text" id="cpt" placeholder="e.g. 77049">
+      </div>
+      <div class="field coins-field">
+        <label for="coins">Your coinsurance %</label>
+        <input type="text" id="coins" placeholder="e.g. 10">
+      </div>
+    </div>
+
+    <label for="groupids">Known provider group IDs (optional)</label>
+    <input type="text" id="groupids" placeholder="e.g. 1023253,1035810,2144925,828817">
+    <p class="hint">Leave blank for a normal search. If you've already confirmed the exact provider group for your location, entering it here skips the broader NPI sweep entirely.</p>
+    <div style="height:18px"></div>
+
+    <button id="run">Find rate</button>
+  </div>
+
+  <div class="results">
+    <h2>Results</h2>
+    <div id="out"><p class="empty">Nothing yet — enter an NPI and CPT code above and run a search.</p></div>
+  </div>
+
+  <footer>
+    Last updated 7/8/2026. Currently covers Aetna's MHBP Standard Option + Value Plan network only. Enter an NPI and CPT code to cross-reference provider groups against negotiated rates.
+  </footer>
+</div>
+
+<script>
+// Not shown in the UI on purpose — this is a public, read-only, unauthenticated
+// endpoint, so hiding it from the page is a minor deterrent, not real security.
+const API_ENDPOINT = "https://lookup-rate-477686024449.us-west2.run.app/";
+
+function modifierLabel(mod) {
+  if (mod === '26') return 'professional component';
+  if (mod === 'TC') return 'technical component';
+  return 'global (combined)';
+}
+
+async function runLookup() {
+  const npi = document.getElementById('npi').value.trim();
+  const cpt = document.getElementById('cpt').value.trim();
+  const groupIds = document.getElementById('groupids').value.trim();
+  const coins = parseFloat(document.getElementById('coins').value.trim());
+  const out = document.getElementById('out');
+  const btn = document.getElementById('run');
+
+  if (!npi || !cpt) {
+    out.innerHTML = '<p class="empty">Fill in an NPI and a CPT code first.</p>';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Looking up…';
+  out.innerHTML = '<p class="empty">Querying BigQuery…</p>';
+
+  let rows;
+  try {
+    let url = API_ENDPOINT + '?npi=' + encodeURIComponent(npi) + '&cpt=' + encodeURIComponent(cpt);
+    if (groupIds) url += '&group_ids=' + encodeURIComponent(groupIds);
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || ('Request failed with status ' + resp.status));
+    rows = data;
+  } catch (err) {
+    out.innerHTML = '<div class="notice"><strong>Lookup failed.</strong> ' + err.message +
+      '. The lookup service may be temporarily unavailable — try again in a moment.</div>';
+    btn.disabled = false;
+    btn.textContent = 'Find rate';
+    return;
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Find rate';
+
+  if (!rows || rows.length === 0) {
+    out.innerHTML = '<div class="notice"><strong>No matching rate found</strong> for NPI ' + npi + ' and CPT ' + cpt + ' in the dataset. Double check both values, or confirm this payer/network file actually covers that provider.</div>';
+    return;
+  }
+
+  const categories = {
+    professional: { label: 'Professional component', rates: [] },
+    technical:    { label: 'Technical component',    rates: [] },
+    global:       { label: 'Global (combined)',       rates: [] },
+  };
+
+  rows.forEach(r => {
+    const rate = parseFloat(r.negotiated_rate);
+    if (isNaN(rate)) return;
+    const key = r.modifier === '26' ? 'professional' : r.modifier === 'TC' ? 'technical' : 'global';
+    categories[key].rates.push(rate);
+  });
+
+  let html = '';
+  const totalDistinct = new Set(rows.map(r => r.negotiated_rate)).size;
+  if (!groupIds && totalDistinct > 3) {
+    html += '<div class="notice"><strong>Multiple rate values found</strong> across ' + rows.length + ' matching rows for this NPI/CPT pair — shown below as a range per billing component. A wide range usually means the source file bundles more than one plan or contract tier under this provider. If you can confirm the exact provider group for your location, enter it above to narrow this precisely.</div>';
+  }
+
+  html += '<div class="ledger">';
+  Object.values(categories).forEach(cat => {
+    if (cat.rates.length === 0) {
+      html += '<div class="ledger-row">' +
+        '<div><div class="ledger-desc">' + cat.label + '</div>' +
+        '<div class="ledger-tags"><span class="tag group">no data found</span></div></div>' +
+        '<div class="leader"></div><div></div></div>';
+      return;
+    }
+    const min = Math.min(...cat.rates);
+    const max = Math.max(...cat.rates);
+    const rangeText = min === max ? '$' + min.toFixed(2) : '$' + min.toFixed(2) + ' – $' + max.toFixed(2);
+    let shareText = '';
+    if (!isNaN(coins)) {
+      const shareMin = (min * coins / 100).toFixed(2);
+      const shareMax = (max * coins / 100).toFixed(2);
+      shareText = '<span class="share">your share ≈ $' + shareMin + (min === max ? '' : ' – $' + shareMax) + '</span>';
+    }
+    html += '<div class="ledger-row">' +
+      '<div>' +
+        '<div class="ledger-desc">' + cat.label + '</div>' +
+        '<div class="ledger-tags"><span class="tag group">' + cat.rates.length + ' value' + (cat.rates.length === 1 ? '' : 's') + ' found</span></div>' +
+      '</div>' +
+      '<div class="leader"></div>' +
+      '<div><span class="amount">' + rangeText + '</span>' + shareText + '</div>' +
+    '</div>';
+  });
+  html += '</div>';
+
+  out.innerHTML = html;
+}
+
+document.getElementById('run').addEventListener('click', runLookup);
+</script>
+</body>
+</html>
